@@ -7,6 +7,7 @@ from flask import Flask, request, current_app
 from loader import db
 from myapp.author.models import Author
 from myapp.book.models import Book
+from myapp.pubs.models import Publisher
 
 if sys.version_info[0] < 3:
     b = lambda s: s
@@ -26,21 +27,21 @@ def create_app():
 
 
 class ObjectToDictTestCase(unittest.TestCase):
-    # class Publisher(db.Document):
-    #     name = db.StringField()
-
     def setUp(self):
         #from nose.tools import set_trace; set_trace()
         self.app = create_app()
         self.app.name = 'myapp'
         author = Author(name="testauthor", uri="path/somewhere")
         author.save()
-        book = Book(author=author, title='testbook')
+        publisher = Publisher(name='testpub')
+        publisher.save()
+        book = Book(author=author, publisher=publisher, title='testbook')
         book.save()
 
     def tearDown(self):
         Author.drop_collection()
         Book.drop_collection()
+        Publisher.drop_collection()
 
     def test_dbref(self):
         with self.app.app_context():
@@ -48,7 +49,8 @@ class ObjectToDictTestCase(unittest.TestCase):
             self.assertEqual('testbook', book.title)
             self.assertEqual('testauthor', book.author.name)
 
-            resp = book.as_dict(app=current_app, recursive=True, depth=4) 
+            resp = book.as_dict(app=current_app, recursive=True, depth=4, 
+                                exclude_fields=['publisher']) 
             self.assertEqual('testauthor', resp.get('author').get('name'))
 
     def test_url_paths(self):
@@ -65,12 +67,11 @@ class ObjectToDictTestCase(unittest.TestCase):
             self.assertTrue(resp.get('author').get('uri').startswith(asset_info.get('ASSET_URL')))
 
     def test_model_map(self):
-        model_map = {'Publisher': 'authors'}
-        # Do some sketchy stuff
-        # with self.app.app_context():
-        #     publisher = Publisher.objects().first()
-        #     resp = publisher.as_dict(app=current_app, model_map=model_map)
-        #     self.assertEqual('testpublisher', resp.get('publisher').get('name'))
+        model_map = {'Publisher': 'pubs'}
+        with self.app.app_context():
+            book = Book.objects().first()
+            resp = book.as_dict(app=current_app, model_map=model_map, recursive=True, depth=4)
+            self.assertEqual('testpub', resp.get('publisher').get('name'))
         self.fail("Not implemented")
 
 
