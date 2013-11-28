@@ -1,0 +1,52 @@
+# Eclipse and IDE files
+.metadata
+.project
+.pydevproject
+.settings
+
+# Vim files
+*.swp
+*.swo
+
+# Compiled files and hidden files
+.DS_Store
+*.pyc
+
+# Packages
+*.egg
+*.egg-info
+dist
+build
+eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+lib
+lib64
+__pycache__
+
+# Configuration files are generated from template
+# The generated files should not be in git
+rcfile.*
+!rcfile.sample
+*.cfg
+!*.tmpl
+
+# Installer logs
+pip-log.txt
+
+# Unit test / coverage reports
+.coverage
+.tox
+nosetests.xml
+
+# Translations
+*.mo
+
+# Mr Developer
+.mr.developer.cfg
+.project
+.pydevproject
