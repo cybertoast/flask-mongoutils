@@ -4,16 +4,14 @@ import sys
 import unittest
 
 from flask import Flask, request, current_app
-from flask_mongoutils import object_to_dict
-from flask.ext.mongoengine import MongoEngine
+from loader import db
+from myapp.author.models import Author
+from myapp.book.models import Book
 
 if sys.version_info[0] < 3:
     b = lambda s: s
 else:
     b = lambda s: s.encode('utf-8')
-
-# Create mongodb instance
-db = MongoEngine()
 
 def create_app():
     # Create a sample application and go from there
@@ -26,23 +24,15 @@ def create_app():
     db.init_app(app)
     return app
 
-class Author(db.Document):
-    name = db.StringField()
-    uri = db.StringField()
-    
-
-class Book(db.Document):
-    title = db.StringField()
-    author = db.ReferenceField(Author)
-
-    def as_dict(self, **kwargs):
-        resp = object_to_dict(self, **kwargs)
-        return resp
 
 class ObjectToDictTestCase(unittest.TestCase):
+    # class Publisher(db.Document):
+    #     name = db.StringField()
 
     def setUp(self):
+        #from nose.tools import set_trace; set_trace()
         self.app = create_app()
+        self.app.name = 'myapp'
         author = Author(name="testauthor", uri="path/somewhere")
         author.save()
         book = Book(author=author, title='testbook')
@@ -58,7 +48,7 @@ class ObjectToDictTestCase(unittest.TestCase):
             self.assertEqual('testbook', book.title)
             self.assertEqual('testauthor', book.author.name)
 
-            resp = book.as_dict(app=current_app) 
+            resp = book.as_dict(app=current_app, recursive=True, depth=4) 
             self.assertEqual('testauthor', resp.get('author').get('name'))
 
     def test_url_paths(self):
@@ -69,12 +59,20 @@ class ObjectToDictTestCase(unittest.TestCase):
 
         with self.app.app_context():
             book = Book.objects().first()
-            self.assertEqual('testbook', book.title)
-            self.assertEqual('testauthor', book.author.name)
 
             resp = book.as_dict(app=current_app, asset_info=asset_info, 
-                                url_fields=['uri']) 
-            self.assertEqual('testauthor', resp.get('author').get('name'))
+                                uri_fields=['uri'], recursive=True, depth=4) 
+            self.assertTrue(resp.get('author').get('uri').startswith(asset_info.get('ASSET_URL')))
+
+    def test_model_map(self):
+        model_map = {'Publisher': 'authors'}
+        # Do some sketchy stuff
+        # with self.app.app_context():
+        #     publisher = Publisher.objects().first()
+        #     resp = publisher.as_dict(app=current_app, model_map=model_map)
+        #     self.assertEqual('testpublisher', resp.get('publisher').get('name'))
+        self.fail("Not implemented")
+
 
 def suite():
     suite = unittest.TestSuite()

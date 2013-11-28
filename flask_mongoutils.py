@@ -48,18 +48,22 @@ def object_to_dict(obj=None, exclude_nulls=True,
             {'model-name': {filter} }
         absolute_media_path: WHether to provide full path to Assets objects
         exclude_fields: List of fields to exclude/remove all the way down
-        assets_info: Dict {'ASSET_RESOURCE': 'http://localhost/assets/',
+        asset_info: Dict {'ASSET_RESOURCE': 'http://localhost/assets/',
                            'ASSET_URL': 'http://localhost/_media/',
                            'ASSET_MODEL': 'Assets' (name of class that defines the assets model)}
         uri_fields: List of fieldnames that should be treated as URLs, and have asset-prefix applied
+        model_map: Dict {'ModelName': 'folder_name'} where folder_name is the path under
+                    your project that contains the models.py file. See the lazy_load function
+                    below for more details.
         
     """
     # Some fixed values. Keep in mind that these can't be globals since the
     # app context is not available
     if not 'app' in kwargs.keys():
         raise Exception("Object Encoder expects to receive 'app' as a flask instance (flask.current_app")
+    app = kwargs.get('app')
 
-    assets_info = kwargs.get('asset_info')
+    asset_info = kwargs.get('asset_info')
 
     if (  kwargs.get('current_depth') is not None and
           kwargs.get('current_depth') > 0 and
@@ -81,7 +85,7 @@ def object_to_dict(obj=None, exclude_nulls=True,
     if isinstance(obj, (Document, EmbeddedDocument)):
         # This may not be very portable, so need to figure out a bit more configurable
         # solution for other projects
-        if assets_info and obj._class_name == assets_info.get('ASSET_MODEL'):
+        if asset_info and obj._class_name == asset_info.get('ASSET_MODEL'):
             out = os.path.join(asset_info.get('ASSET_RESOURCE'), obj.uri)
             return out
         
@@ -177,7 +181,7 @@ def object_to_dict(obj=None, exclude_nulls=True,
             # We can do this every time because:
             #   "When Python imports a module, it first checks the module 
             #    registry (sys.modules) to see if the module is already imported"
-            model = lazy_load_model_classes(app, obj.collection)
+            model = lazy_load_model_classes(app, obj.collection, kwargs.get('model_map'))
             Context = globals().get(model)
             
             if not Context:
@@ -235,7 +239,7 @@ def object_to_dict(obj=None, exclude_nulls=True,
         
     return out
 
-def lazy_load_model_classes(app, collection):
+def lazy_load_model_classes(app, collection, model_map=None):
     """Lazily load modules as necessary"""
     # Ref: http://stackoverflow.com/questions/3372361/dynamic-loading-of-modules-then-using-from-x-import-on-loaded-module
     classname = ''.join([ x.capitalize() for x in collection.split('_') ])
@@ -245,11 +249,16 @@ def lazy_load_model_classes(app, collection):
         return classname
     
     appname = app.name
-    appname = re.sub(".app", "", appname)
+    appname = re.sub("\.app", "", appname)
     model_path = u"%s.%s.models" % (appname, collection)
     # import all release models into (global) namespace
     try:
         exec("from %s import %s" % (model_path, classname)) in globals()
+    except ImportError as exc:
+        if model_map:
+            model_path = u"%s.%s.models" % (appname, model_map.get(classname))
+            exec("from %s import %s" % (model_path, classname)) in globals()
+
     except Exception as exc:
         app.logger.error("Exception lazy loading %s" % collection, exc_info=True)
 
