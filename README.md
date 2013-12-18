@@ -1,7 +1,7 @@
 # Using flask-mongoutils
 
 ```
-from flask.ext.mongoutils import as_dict
+from flask.ext.mongoutils import object_to_dict as as_dict
 ```
 
 A simple way of making this work, without relying on installing

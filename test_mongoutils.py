@@ -7,7 +7,8 @@ from flask import Flask, request, current_app
 from loader import db
 from myapp.author.models import Author
 from myapp.book.models import Book
-from myapp.pubs.models import Publisher
+# This convoluted import is to test out lazy imports later
+from myapp.model.mapping.models import Publisher
 
 if sys.version_info[0] < 3:
     b = lambda s: s
@@ -67,7 +68,7 @@ class ObjectToDictTestCase(unittest.TestCase):
             self.assertTrue(resp.get('author').get('uri').startswith(asset_info.get('ASSET_URL')))
 
     def test_model_map(self):
-        model_map = {'Publisher': 'pubs'}
+        model_map = {'Publisher': 'model.mapping'}
         with self.app.app_context():
             book = Book.objects().first()
             resp = book.as_dict(app=current_app, model_map=model_map, recursive=True, depth=4)
