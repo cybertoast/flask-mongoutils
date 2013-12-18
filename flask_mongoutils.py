@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-__version_info__ = ('0', '2', '1')
+__version_info__ = ('0', '3', '0')
 __version__ = '.'.join(__version_info__)
 __author__ = 'Sundar Raman'
 __license__ = 'BSD'
@@ -265,15 +265,21 @@ def lazy_load_model_classes(app, collection, model_map=None):
     try:
         exec("from %s import %s" % (model_path, classname)) in globals()
     except ImportError as exc:
-        if model_map:
-            try:
-                # Assume that the model_map provides the full path to the package
-                model_path = u"%s.%s" % (appname, model_map.get(classname))
-                exec("from %s import %s" % (model_path, classname)) in globals()
-            except ImportError as exc:
-                # It may be that the model is defined in a 'models' file under the path
-                model_path = u"%s.%s.models" % (appname, model_map.get(classname))
-                exec("from %s import %s" % (model_path, classname)) in globals()
+        try:
+            model_path = u"%s.%s.%s" % (appname, 'modules', collection)
+            exec("from %s import %s" % (model_path, classname)) in globals()
+        except ImportError as exc:
+            if model_map:
+                try:
+                    # Assume that the model_map provides the full path to the package
+                    model_path = u"%s.%s" % (appname, model_map.get(classname))
+                    exec("from %s import %s" % (model_path, classname)) in globals()
+                except ImportError as exc:
+                    # It may be that the model is defined in a 'models' file under the path
+                    model_path = u"%s.%s.models" % (appname, model_map.get(classname))
+                    exec("from %s import %s" % (model_path, classname)) in globals()
+        except Exception as exc:
+            app.logger.error("Exception lazy loading %s" % collection, exc_info=True)
 
     except Exception as exc:
         app.logger.error("Exception lazy loading %s" % collection, exc_info=True)
