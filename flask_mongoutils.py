@@ -31,30 +31,40 @@ def object_to_dict(obj=None, exclude_nulls=True,
                    recursive=False, depth=1, **kwargs):
     """Take a Mongo (or other) object and return a JSON
      
-    :param obj: object to encode
-    :param exclude_nulls: if a value is None, don't include it in the return set
-    :param recursive: Descend into the referenced documents and return those objects.
-        Keep in mind that recursive can be problematic since there's no depth!
-    :param depth: recursion-depth. If 0, this is unlimited!
+    Kwargs:
+        obj (bson/json): Object to convert into a dictionary
+        exclude_nulls (bool): Whether to include keys with null values in return data
+        recursive: Descend into the referenced documents and return those objects.
+            Keep in mind that recursive can be problematic since there's no depth!
+        depth (int): recursion-depth. If 0, this is unlimited!
     
-    kwargs:
-        app: Current flask app
-        current_depth: for internal recursion
-        use_derefs: whether to use deref_only and deref_exclude properties 
-                    to filter dereferenced values. See doc in EntityMixin
-        query_function: Name of the method on the model to use instead of 'objects'
+        app (Flask-app): Required. Current flask app
+        use_derefs (bool): whether to use deref_only and deref_exclude properties 
+            to filter dereferenced values. See doc in EntityMixin
+        query_function (dict): Name of the method on the model to use instead of 'objects'
             {'with_field_having_count': {'field-name': 'count'}}
-        deep_filter: Filter to apply on a nested model
+        deep_filter (dict): Filter to apply on a nested model
             {'model-name': {filter} }
-        absolute_media_path: WHether to provide full path to Assets objects
         exclude_fields: List of fields to exclude/remove all the way down
-        asset_info: Dict {'ASSET_RESOURCE': 'http://localhost/assets/',
-                           'ASSET_URL': 'http://localhost/_media/',
-                           'ASSET_MODEL': 'Assets' (name of class that defines the assets model)}
-        uri_fields: List of fieldnames that should be treated as URLs, and have asset-prefix applied
-        model_map: Dict {'ModelName': 'folder_name'} where folder_name is the path under
-                    your project that contains the models.py file. See the lazy_load function
-                    below for more details.
+        asset_info (dict): Info for converting relative `uri_fields` to absolute paths
+            {'ASSET_RESOURCE': 'http://localhost/assets/',
+             'ASSET_URL': 'http://localhost/_media/',
+             'ASSET_MODEL': 'Assets' (name of class that defines the assets model)}
+        uri_fields (list): List of fieldnames to convert to full-path
+            These are the fields that should be treated as URLs, and should be prefixed
+            with asset_info.ASSET_RESOURCE
+
+        model_map (dict): The mapping between a model class and the path where it is defined
+            This allows non-standard (ie. not module.models.py) mapping.
+            Defined as {'ModelName': 'path.to.model'} where `path.to.model` is the full path 
+            under your project to the .py file containing the model definition.
+            E.g. `{ 'Creators': 'path.to.model' }` would be the same as:
+                `from <current_project_name>.path.to.model import Creators`
+            See the lazy_load function below for an implementation example.
+        current_depth (int): Internal. Stores internal recursion state.
+
+    Returns:
+        Dictionary version of the provided object
         
     """
     # Some fixed values. Keep in mind that these can't be globals since the
@@ -256,8 +266,14 @@ def lazy_load_model_classes(app, collection, model_map=None):
         exec("from %s import %s" % (model_path, classname)) in globals()
     except ImportError as exc:
         if model_map:
-            model_path = u"%s.%s.models" % (appname, model_map.get(classname))
-            exec("from %s import %s" % (model_path, classname)) in globals()
+            try:
+                # Assume that the model_map provides the full path to the package
+                model_path = u"%s.%s" % (appname, model_map.get(classname))
+                exec("from %s import %s" % (model_path, classname)) in globals()
+            except ImportError as exc:
+                # It may be that the model is defined in a 'models' file under the path
+                model_path = u"%s.%s.models" % (appname, model_map.get(classname))
+                exec("from %s import %s" % (model_path, classname)) in globals()
 
     except Exception as exc:
         app.logger.error("Exception lazy loading %s" % collection, exc_info=True)
