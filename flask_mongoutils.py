@@ -266,7 +266,7 @@ def lazy_load_model_classes(app, collection, model_map=None):
         exec("from %s import %s" % (model_path, classname)) in globals()
     except ImportError as exc:
         try:
-            model_path = u"%s.%s.%s" % (appname, 'modules', collection)
+            model_path = u"%s.modules.%s.models" % (appname, 'modules', collection)
             exec("from %s import %s" % (model_path, classname)) in globals()
         except ImportError as exc:
             if model_map:
@@ -275,9 +275,20 @@ def lazy_load_model_classes(app, collection, model_map=None):
                     model_path = u"%s.%s" % (appname, model_map.get(classname))
                     exec("from %s import %s" % (model_path, classname)) in globals()
                 except ImportError as exc:
-                    # It may be that the model is defined in a 'models' file under the path
-                    model_path = u"%s.%s.models" % (appname, model_map.get(classname))
-                    exec("from %s import %s" % (model_path, classname)) in globals()
+                    try:
+                        # It may be that the model is defined in a 'models' file under the path
+                        model_path = u"%s.%s.models" % (appname, model_map.get(classname))
+                        exec("from %s import %s" % (model_path, classname)) in globals()
+                    except ImportError as exc:
+                        try:
+                            # It may be that the model is defined in a 'models' file under the path
+                            model_path = u"%s.modules.%s" % (appname, model_map.get(classname))
+                            exec("from %s import %s" % (model_path, classname)) in globals()
+                        except ImportError as exc:
+                            # It may be that the model is defined in a 'models' file under the path
+                            model_path = u"%s.modules.%s.models" % (appname, model_map.get(classname))
+                            exec("from %s import %s" % (model_path, classname)) in globals()
+
         except Exception as exc:
             app.logger.error("Exception lazy loading %s" % collection, exc_info=True)
 
