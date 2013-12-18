@@ -266,7 +266,7 @@ def lazy_load_model_classes(app, collection, model_map=None):
         exec("from %s import %s" % (model_path, classname)) in globals()
     except ImportError as exc:
         try:
-            model_path = u"%s.modules.%s.models" % (appname, 'modules', collection)
+            model_path = u"%s.modules.%s.models" % (appname, collection)
             exec("from %s import %s" % (model_path, classname)) in globals()
         except ImportError as exc:
             if model_map:
