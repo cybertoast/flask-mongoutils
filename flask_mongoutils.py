@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-__version_info__ = ('0', '3', '1')
+__version_info__ = ('0', '3', '2')
 __version__ = '.'.join(__version_info__)
 __author__ = 'Sundar Raman'
 __license__ = 'BSD'
@@ -195,8 +195,8 @@ def object_to_dict(obj=None, exclude_nulls=True,
             Context = globals().get(model)
             
             if not Context:
-                app.logger.error("Programming error! "
-                                 "Missing Context (or import) for %s" % obj.collection)
+                app.logger.error("Model error: possibly model_map={'ClassName':'class.path'}! "
+                                 "Missing Context (or import) for '%s'" % obj.collection)
                 out = str(obj)
             else:
                 try:
@@ -269,7 +269,7 @@ def lazy_load_model_classes(app, collection, model_map=None):
             model_path = u"%s.modules.%s.models" % (appname, collection)
             exec("from %s import %s" % (model_path, classname)) in globals()
         except ImportError as exc:
-            if model_map:
+            if model_map and model_map.get(classname):
                 try:
                     # Assume that the model_map provides the full path to the package
                     model_path = u"%s.%s" % (appname, model_map.get(classname))
@@ -288,6 +288,10 @@ def lazy_load_model_classes(app, collection, model_map=None):
                             # It may be that the model is defined in a 'models' file under the path
                             model_path = u"%s.modules.%s.models" % (appname, model_map.get(classname))
                             exec("from %s import %s" % (model_path, classname)) in globals()
+                        except Exception as exc:
+                            app.logger.error("Exception lazy loading %s" % collection, exc_info=True)
+                except Exception as exc:
+                    app.logger.error("Exception lazy loading %s" % collection, exc_info=True)
 
         except Exception as exc:
             app.logger.error("Exception lazy loading %s" % collection, exc_info=True)
@@ -296,8 +300,8 @@ def lazy_load_model_classes(app, collection, model_map=None):
         app.logger.error("Exception lazy loading %s" % collection, exc_info=True)
 
     if classname not in globals().keys():
-        app.logger.error("Programming error! "
-                         "Missing Context (or import) for %s => %s."
+        app.logger.error("Model error: possibly model_map={'ClassName':'class.path'}! "
+                         "Missing Context (or import) for '%s' => '%s'."
                          "%s vs %s" % (collection, classname, globals().keys(), classname),
                          exc_info=True)
 
