@@ -29,10 +29,10 @@ def create_app():
 
 class ObjectToDictTestCase(unittest.TestCase):
     def setUp(self):
-        #from nose.tools import set_trace; set_trace()
         self.app = create_app()
         self.app.name = 'myapp'
-        author = Author(name="testauthor", uri="path/somewhere")
+        author = Author(name="testauthor", uri="path/somewhere", 
+                        private="private", excluded="excluded")
         author.save()
         publisher = Publisher(name='testpub')
         publisher.save()
@@ -79,6 +79,18 @@ class ObjectToDictTestCase(unittest.TestCase):
             book = Book.objects().first()
             resp = book.as_dict(app=current_app, model_map=model_map, recursive=True, depth=4)
             self.assertEqual('testpub', resp.get('publisher').get('name'))
+
+    def test_private_and_excluded_fields(self):
+        with self.app.app_context():
+            author = Author.objects.first()
+            adata = author.as_dict(app=current_app, recursive=True)
+            self.assertTrue(adata.get('private') is None)
+            self.assertTrue(adata.get('excluded') is None)
+
+            book = Book.objects.first()
+            bdata = book.as_dict(app=current_app, recursive=True)
+            self.assertTrue(bdata.get('author').get('private') is None)
+            self.assertTrue(bdata.get('author').get('excluded') is None)
 
 
 def suite():

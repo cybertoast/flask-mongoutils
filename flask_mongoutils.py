@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-__version_info__ = ('0', '3', '2')
+__version_info__ = ('0', '3', '3')
 __version__ = '.'.join(__version_info__)
 __author__ = 'Sundar Raman'
 __license__ = 'BSD'
@@ -100,8 +100,17 @@ def object_to_dict(obj=None, exclude_nulls=True,
             return out
         
         out = dict(obj._data)
+        _private_fields = getattr(obj, '_PRIVATE_FIELDS', None)
         for k,v in out.items():
             if kwargs.get('exclude_fields') and k in kwargs.get('exclude_fields'):
+                out[k] = None
+                kwargs['delete_keys'].append(k)
+                continue
+            if k in ['_PRIVATE_FIELDS']:
+                out[k] = None
+                kwargs['delete_keys'].append(k)
+                continue
+            if _private_fields and k in _private_fields:
                 out[k] = None
                 kwargs['delete_keys'].append(k)
                 continue
@@ -195,7 +204,7 @@ def object_to_dict(obj=None, exclude_nulls=True,
             Context = globals().get(model)
             
             if not Context:
-                app.logger.error("Model error: possibly model_map={'ClassName':'class.path'}! "
+                app.logger.error("Missing definition in model_map (%s)" % str(kwargs.get('model_map')),
                                  "Missing Context (or import) for '%s'" % obj.collection)
                 out = str(obj)
             else:
