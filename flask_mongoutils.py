@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-__version_info__ = ('0', '3', '3')
+__version_info__ = ('0', '3', '4')
 __version__ = '.'.join(__version_info__)
 __author__ = 'Sundar Raman'
 __license__ = 'BSD'
@@ -48,8 +48,10 @@ def object_to_dict(obj=None, exclude_nulls=True,
         exclude_fields: List of fields to exclude/remove all the way down
         asset_info (dict): Info for converting relative `uri_fields` to absolute paths
             {'ASSET_RESOURCE': 'http://localhost/assets/',
-             'ASSET_URL': 'http://localhost/_media/',
-             'ASSET_MODEL': 'Assets' (name of class that defines the assets model)}
+             'ASSET_URL': 'http://localhost/_media/'}
+        types_as_str_repr (List): List of types that should be treated as their __str__
+            representation. For example, Assets might need to be just a URL rather than
+            the resolved object in certain cases.
         uri_fields (list): List of fieldnames to convert to full-path
             These are the fields that should be treated as URLs, and should be prefixed
             with asset_info.ASSET_RESOURCE
@@ -65,7 +67,12 @@ def object_to_dict(obj=None, exclude_nulls=True,
 
     Returns:
         Dictionary version of the provided object
-        
+    
+    KNOWN ISSUES:
+        The use of 'types_as_str_repr' and a list of uri-fields seems to not 
+        work correctly with asset-prefixing.
+        In this case the type is prefixed correctly for the str'ed type, but is 
+        not prepended to deeply string fields. 
     """
     # Some fixed values. Keep in mind that these can't be globals since the
     # app context is not available
@@ -95,8 +102,9 @@ def object_to_dict(obj=None, exclude_nulls=True,
     if isinstance(obj, (Document, EmbeddedDocument)):
         # This may not be very portable, so need to figure out a bit more configurable
         # solution for other projects
-        if asset_info and obj._class_name == asset_info.get('ASSET_MODEL'):
-            out = os.path.join(asset_info.get('ASSET_RESOURCE'), obj.uri)
+        if kwargs.get('types_as_str_repr') and obj.__class__.__name__ in kwargs.get('types_as_str_repr'):
+            out = str(obj)
+            # out = os.path.join(asset_info.get('ASSET_RESOURCE'), str(obj))
             return out
         
         out = dict(obj._data)
@@ -134,16 +142,27 @@ def object_to_dict(obj=None, exclude_nulls=True,
                     kwargs['delete_keys'].append(k)
                 else:
                     if isinstance(v, (str, unicode)):
-                        if kwargs.get('apply_url_prefix'):
-                            out[k] = asset_info.get('ASSET_URL') + v
-                        else:
-                            out[k] = v
+                        out[k] = v
                     elif isinstance(v, Number):
                         out[k] = v
                     else:
                         out[k] = object_to_dict(v, recursive=recursive, 
                                                 depth=depth, **kwargs)
-                    
+
+            # We've already established that this key should be asset-prefixed (above)
+            # But we do this prefixing last so that we can handle types_as_str_repr()
+            # conversions
+            if ( kwargs.get('apply_url_prefix') and asset_info ):
+                if isinstance(out[k], list):
+                    out[k] = ["%s%s" % (asset_info.get('ASSET_URL') or '', item)
+                              for item in out[k]]
+                elif isinstance(out[k], (str, unicode)):
+                    out[k] = "%s%s" % (asset_info.get('ASSET_URL') or '', out[k])
+                elif isinstance(out[k], dict):
+                    for field in kwargs.get('uri_fields'):
+                        if out[k].get(field): 
+                            out[k][field] = "%s%s" % (asset_info.get('ASSET_URL') or '', out[k][field])
+            
         # To avoid breaking loop flow, do at the end of looping
         for delkey in kwargs.get('delete_keys'):
             # double check that we're not deleting a non-empty key
@@ -185,7 +204,7 @@ def object_to_dict(obj=None, exclude_nulls=True,
         # This is an unlikely case, which is not handled up at the top,
         #    but could happen if the field is a list of uri's
         if kwargs.get('apply_url_prefix'):
-            out = asset_info.get('ASSET_URL') + obj
+            out = "%s%s" % (asset_info.get('ASSET_URL') or '', obj)
         
     elif isinstance(obj, (datetime)):
         out = str(obj)
@@ -255,7 +274,7 @@ def object_to_dict(obj=None, exclude_nulls=True,
         app.logger.debug("Could not JSON-encode type '%s': %s" % 
                          (type(obj), str(obj)))
         out = str(obj)
-        
+    
     return out
 
 def lazy_load_model_classes(app, collection, model_map=None):
