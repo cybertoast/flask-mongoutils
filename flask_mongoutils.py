@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-__version_info__ = ('0', '3', '4')
+__version_info__ = ('0', '3', '5')
 __version__ = '.'.join(__version_info__)
 __author__ = 'Sundar Raman'
 __license__ = 'BSD'
@@ -81,6 +81,10 @@ def object_to_dict(obj=None, exclude_nulls=True,
     app = kwargs.get('app')
 
     asset_info = kwargs.get('asset_info')
+    # If resource-path is provided then use that, otherwise the url-path
+    # TODO: Should the caller have a different expectation based on which value is
+    #   sent? Why bother having a dict, rather than a single ASSET_PREFIX value?
+    ASSET_URL = asset_info.get('ASSET_RESOURCE') or asset_info.get('ASSET_URL') or ''
 
     if (  kwargs.get('current_depth') is not None and
           kwargs.get('current_depth') > 0 and
@@ -154,14 +158,14 @@ def object_to_dict(obj=None, exclude_nulls=True,
             # conversions
             if ( kwargs.get('apply_url_prefix') and asset_info ):
                 if isinstance(out[k], list):
-                    out[k] = ["%s%s" % (asset_info.get('ASSET_URL') or '', item)
+                    out[k] = ["%s%s" % (ASSET_URL, item)
                               for item in out[k]]
                 elif isinstance(out[k], (str, unicode)):
-                    out[k] = "%s%s" % (asset_info.get('ASSET_URL') or '', out[k])
+                    out[k] = "%s%s" % (ASSET_URL, out[k])
                 elif isinstance(out[k], dict):
                     for field in kwargs.get('uri_fields'):
                         if out[k].get(field): 
-                            out[k][field] = "%s%s" % (asset_info.get('ASSET_URL') or '', out[k][field])
+                            out[k][field] = "%s%s" % (ASSET_URL, out[k][field])
             
         # To avoid breaking loop flow, do at the end of looping
         for delkey in kwargs.get('delete_keys'):
@@ -204,7 +208,7 @@ def object_to_dict(obj=None, exclude_nulls=True,
         # This is an unlikely case, which is not handled up at the top,
         #    but could happen if the field is a list of uri's
         if kwargs.get('apply_url_prefix'):
-            out = "%s%s" % (asset_info.get('ASSET_URL') or '', obj)
+            out = "%s%s" % (ASSET_URL, obj)
         
     elif isinstance(obj, (datetime)):
         out = str(obj)
