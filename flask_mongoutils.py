@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-__version_info__ = ('0', '3', '5')
+__version_info__ = ('0', '3', '6')
 __version__ = '.'.join(__version_info__)
 __author__ = 'Sundar Raman'
 __license__ = 'BSD'
@@ -80,7 +80,7 @@ def object_to_dict(obj=None, exclude_nulls=True,
         raise Exception("Object Encoder expects to receive 'app' as a flask instance (flask.current_app")
     app = kwargs.get('app')
 
-    asset_info = kwargs.get('asset_info')
+    asset_info = kwargs.get('asset_info') or {}
     # If resource-path is provided then use that, otherwise the url-path
     # TODO: Should the caller have a different expectation based on which value is
     #   sent? Why bother having a dict, rather than a single ASSET_PREFIX value?
