@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-__version_info__ = ('0', '3', '6')
+__version_info__ = ('0', '3', '7')
 __version__ = '.'.join(__version_info__)
 __author__ = 'Sundar Raman'
 __license__ = 'BSD'
@@ -156,15 +156,19 @@ def object_to_dict(obj=None, exclude_nulls=True,
             # We've already established that this key should be asset-prefixed (above)
             # But we do this prefixing last so that we can handle types_as_str_repr()
             # conversions
-            if ( kwargs.get('apply_url_prefix') and asset_info ):
+            if isinstance(out[k], (str, unicode)):
+                if (kwargs.get('apply_url_prefix') and asset_info):
+                    if not out[k].startswith(ASSET_URL):
+                        out[k] = "%s%s" % (ASSET_URL, out[k])
+                        
+            if ( kwargs.get('types_as_str_repr') and 
+                 kwargs.get('apply_url_prefix') and asset_info):
                 if isinstance(out[k], list):
-                    out[k] = ["%s%s" % (ASSET_URL, item)
+                    out[k] = ["%s%s" % (ASSET_URL, item) if not item.startswith(ASSET_URL) else item
                               for item in out[k]]
-                elif isinstance(out[k], (str, unicode)):
-                    out[k] = "%s%s" % (ASSET_URL, out[k])
                 elif isinstance(out[k], dict):
                     for field in kwargs.get('uri_fields'):
-                        if out[k].get(field): 
+                        if out[k].get(field) and not out[k][field].startswith(ASSET_URL): 
                             out[k][field] = "%s%s" % (ASSET_URL, out[k][field])
             
         # To avoid breaking loop flow, do at the end of looping
