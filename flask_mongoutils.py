@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-__version_info__ = ('0', '3', '7')
+__version_info__ = ('0', '3', '8')
 __version__ = '.'.join(__version_info__)
 __author__ = 'Sundar Raman'
 __license__ = 'BSD'
@@ -165,7 +165,8 @@ def object_to_dict(obj=None, exclude_nulls=True,
                  kwargs.get('apply_url_prefix') and asset_info):
                 if isinstance(out[k], list):
                     out[k] = ["%s%s" % (ASSET_URL, item) if not item.startswith(ASSET_URL) else item
-                              for item in out[k]]
+                              for item in out[k] 
+                              if item]
                 elif isinstance(out[k], dict):
                     for field in kwargs.get('uri_fields'):
                         if out[k].get(field) and not out[k][field].startswith(ASSET_URL): 
@@ -263,7 +264,9 @@ def object_to_dict(obj=None, exclude_nulls=True,
                         
                     if not doc:
                         app.logger.error("Orphaned document: %s.id=%s" % (obj.collection, obj.id))
-                        out = str(obj)
+                        # Since this is an orphaned record, meaning it can't be decoded,
+                        # don't send back a representation of it after logging
+                        out = None
                     else:
                         if kwargs.get('current_depth') == depth:
                             if doc: doc = doc._data
