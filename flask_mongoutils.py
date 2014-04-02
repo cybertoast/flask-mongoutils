@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-__version_info__ = ('0', '3', '8')
+__version_info__ = ('0', '3', '9')
 __version__ = '.'.join(__version_info__)
 __author__ = 'Sundar Raman'
 __license__ = 'BSD'
@@ -158,7 +158,7 @@ def object_to_dict(obj=None, exclude_nulls=True,
             # conversions
             if isinstance(out[k], (str, unicode)):
                 if (kwargs.get('apply_url_prefix') and asset_info):
-                    if not out[k].startswith(ASSET_URL):
+                    if not out[k].startswith(ASSET_URL) and k in kwargs.get('uri_fields'):
                         out[k] = "%s%s" % (ASSET_URL, out[k])
                         
             if ( kwargs.get('types_as_str_repr') and 
@@ -166,11 +166,12 @@ def object_to_dict(obj=None, exclude_nulls=True,
                 if isinstance(out[k], list):
                     out[k] = ["%s%s" % (ASSET_URL, item) if not item.startswith(ASSET_URL) else item
                               for item in out[k] 
-                              if item]
+                              if item and isinstante(item, (str, unicode))]
                 elif isinstance(out[k], dict):
                     for field in kwargs.get('uri_fields'):
-                        if out[k].get(field) and not out[k][field].startswith(ASSET_URL): 
-                            out[k][field] = "%s%s" % (ASSET_URL, out[k][field])
+                        if isinstance(out[k].get(field), (str, unicode)):
+                            if out[k].get(field) and not out[k][field].startswith(ASSET_URL): 
+                                out[k][field] = "%s%s" % (ASSET_URL, out[k][field])
             
         # To avoid breaking loop flow, do at the end of looping
         for delkey in kwargs.get('delete_keys'):
@@ -202,6 +203,11 @@ def object_to_dict(obj=None, exclude_nulls=True,
 
             if k in kwargs.get('delete_keys'):
                 obj[k] = None
+            
+            if ( kwargs.get('uri_fields') and 
+                 k in kwargs.get('uri_fields') and 
+                 isinstance(v, (str, unicode)) ):
+                obj[k] = "%s%s" % (ASSET_URL, v) 
                 
         out = dict([(k,object_to_dict(v, recursive=recursive, depth=depth, **kwargs)) 
                     for (k,v) in obj.items()])
