@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-__version_info__ = ('0', '3', '9')
+__version_info__ = ('0', '3', '10')
 __version__ = '.'.join(__version_info__)
 __author__ = 'Sundar Raman'
 __license__ = 'BSD'
@@ -205,9 +205,11 @@ def object_to_dict(obj=None, exclude_nulls=True,
                 obj[k] = None
             
             if ( kwargs.get('uri_fields') and 
-                 k in kwargs.get('uri_fields') and 
-                 isinstance(v, (str, unicode)) ):
-                obj[k] = "%s%s" % (ASSET_URL, v) 
+                 k in kwargs.get('uri_fields') ):
+                # Handlne any fields that are nested that need to have url-prefixing
+                kwargs['apply_url_prefix'] = True
+                obj[k] = object_to_dict(v, recursive=recursive, depth=depth, **kwargs)
+                kwargs['apply_url_prefix'] = False
                 
         out = dict([(k,object_to_dict(v, recursive=recursive, depth=depth, **kwargs)) 
                     for (k,v) in obj.items()])
