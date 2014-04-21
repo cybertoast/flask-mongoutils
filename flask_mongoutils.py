@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-__version_info__ = ('0', '3', '10')
+__version_info__ = ('0', '3', '11')
 __version__ = '.'.join(__version_info__)
 __author__ = 'Sundar Raman'
 __license__ = 'BSD'
@@ -166,7 +166,7 @@ def object_to_dict(obj=None, exclude_nulls=True,
                 if isinstance(out[k], list):
                     out[k] = ["%s%s" % (ASSET_URL, item) if not item.startswith(ASSET_URL) else item
                               for item in out[k] 
-                              if item and isinstante(item, (str, unicode))]
+                              if item and isinstance(item, (str, unicode))]
                 elif isinstance(out[k], dict):
                     for field in kwargs.get('uri_fields'):
                         if isinstance(out[k].get(field), (str, unicode)):
@@ -195,6 +195,7 @@ def object_to_dict(obj=None, exclude_nulls=True,
         out = [object_to_dict(item, recursive=recursive, depth=depth, **kwargs) 
                for item in obj]
     elif isinstance(obj, (dict)):
+        out = {}
         for k,v in obj.items():
             if kwargs.get('exclude_fields') and k in kwargs.get('exclude_fields'):
                 obj[k] = None
@@ -203,16 +204,13 @@ def object_to_dict(obj=None, exclude_nulls=True,
 
             if k in kwargs.get('delete_keys'):
                 obj[k] = None
-            
-            if ( kwargs.get('uri_fields') and 
-                 k in kwargs.get('uri_fields') ):
-                # Handlne any fields that are nested that need to have url-prefixing
+            if k in kwargs.get('uri_fields'):
                 kwargs['apply_url_prefix'] = True
-                obj[k] = object_to_dict(v, recursive=recursive, depth=depth, **kwargs)
+            else:
                 kwargs['apply_url_prefix'] = False
-                
-        out = dict([(k,object_to_dict(v, recursive=recursive, depth=depth, **kwargs)) 
-                    for (k,v) in obj.items()])
+            vout = object_to_dict(v, recursive=recursive, depth=depth, **kwargs)
+            out[k] = vout
+
     elif isinstance(obj, bson.ObjectId):
         # out = {'ObjectId':str(obj)}
         out = str(obj)
