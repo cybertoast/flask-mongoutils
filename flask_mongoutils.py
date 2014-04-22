@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-__version_info__ = ('0', '3', '11')
+__version_info__ = ('0', '3', '12')
 __version__ = '.'.join(__version_info__)
 __author__ = 'Sundar Raman'
 __license__ = 'BSD'
@@ -162,6 +162,7 @@ def object_to_dict(obj=None, exclude_nulls=True,
                         out[k] = "%s%s" % (ASSET_URL, out[k])
                         
             if ( kwargs.get('types_as_str_repr') and 
+                 obj.__class__.__name__ in kwargs.get('types_as_str_repr') and
                  kwargs.get('apply_url_prefix') and asset_info):
                 if isinstance(out[k], list):
                     out[k] = ["%s%s" % (ASSET_URL, item) if not item.startswith(ASSET_URL) else item
