@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-__version_info__ = ('0', '3', '13')
+__version_info__ = ('0', '3', '14')
 __version__ = '.'.join(__version_info__)
 __author__ = 'Sundar Raman'
 __license__ = 'BSD'
@@ -278,9 +278,9 @@ def object_to_dict(obj=None, exclude_nulls=True,
                         if ( kwargs.get('types_as_str_repr') and 
                              doc._class_name in kwargs.get('types_as_str_repr') ):
                             doc = str(doc)
-                    else:
-                        if kwargs.get('current_depth') == depth:
-                            if doc: doc = doc._data
+                        else:
+                            if kwargs.get('current_depth') == depth:
+                                if doc: doc = doc._data
                         
                         out = object_to_dict(obj=doc, recursive=recursive, depth=depth, **kwargs)
                 except Exception as exc:
