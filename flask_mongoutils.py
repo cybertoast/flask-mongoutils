@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-__version_info__ = ('0', '3', '14')
+__version_info__ = ('0', '3', '15')
 __version__ = '.'.join(__version_info__)
 __author__ = 'Sundar Raman'
 __license__ = 'BSD'
@@ -27,8 +27,7 @@ import os
 import re
 from datetime import datetime
 
-def object_to_dict(obj=None, exclude_nulls=True, 
-                   recursive=False, depth=1, **kwargs):
+def object_to_dict(obj=None, recursive=False, depth=1, **kwargs):
     """Take a Mongo (or other) object and return a JSON
      
     Kwargs:
@@ -127,6 +126,10 @@ def object_to_dict(obj=None, exclude_nulls=True,
                 kwargs['delete_keys'].append(k)
                 continue
             
+            if v is None and kwargs.get('exclude_nulls'):
+                out.pop(k)
+                continue
+            
             # Apply the URL absolute path prefix for the defined fields
             if kwargs.get('uri_fields') and k in kwargs.get('uri_fields'):
                 kwargs['apply_url_prefix'] = True
@@ -142,8 +145,11 @@ def object_to_dict(obj=None, exclude_nulls=True,
                     out[k] = str(v)
             else:
                 # No further processing necessary for some values
-                if exclude_nulls and v is None:
+                if v is None and kwargs.get('exclude_nulls'):
+                    out.pop(k)
                     kwargs['delete_keys'].append(k)
+                    continue
+                
                 else:
                     if isinstance(v, (str, unicode)):
                         out[k] = v
@@ -179,7 +185,7 @@ def object_to_dict(obj=None, exclude_nulls=True,
             # double check that we're not deleting a non-empty key
             if ( delkey in out.keys() and 
                  ((out.get(delkey) is None) or (delkey is None)) ):
-                del(out[delkey])
+                out.pop(delkey)
                 
         # Remove our tracker for the next loop
         if kwargs.get('delete_keys'): kwargs['delete_keys'] = []
@@ -210,6 +216,14 @@ def object_to_dict(obj=None, exclude_nulls=True,
             else:
                 kwargs['apply_url_prefix'] = False
             vout = object_to_dict(v, recursive=recursive, depth=depth, **kwargs)
+
+            if ( v is None and 
+                 kwargs.get('exclude_nulls')):                
+                # Don't even add the key into the output
+                if k in out.keys():
+                    out.pop(k)
+                continue
+            
             out[k] = vout
 
     elif isinstance(obj, bson.ObjectId):
@@ -260,9 +274,9 @@ def object_to_dict(obj=None, exclude_nulls=True,
                     else:
                         # Only apply the deref_* filters if requested
                         if kwargs.get('use_derefs'):
-                            if hasattr(Context, 'deref_only'):
+                            if hasattr(Context, 'deref_only_fields'):
                                 doc = Context.objects(**filters).only(*Context.deref_only_fields).first()
-                            elif hasattr(Context, 'deref_exclude'):
+                            elif hasattr(Context, 'deref_exclude_fields'):
                                 doc = Context.objects(**filters).exclude(*Context.deref_exclude_fields).first()
                             else:
                                 doc = Context.objects(**filters).first()
