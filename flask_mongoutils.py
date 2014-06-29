@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-__version_info__ = ('0', '3', '15')
+__version_info__ = ('0', '3', '16')
 __version__ = '.'.join(__version_info__)
 __author__ = 'Sundar Raman'
 __license__ = 'BSD'
@@ -199,8 +199,16 @@ def object_to_dict(obj=None, recursive=False, depth=1, **kwargs):
         out = [ (g,list(l)) for g,l in obj ]
     elif isinstance(obj, (list)):
         # GeoPointField is also a list!
-        out = [object_to_dict(item, recursive=recursive, depth=depth, **kwargs) 
-               for item in obj]
+        out = []
+        for item in obj:
+            odict = object_to_dict(item, recursive=recursive, depth=depth, **kwargs)
+            # Don't return null objects that were transformed, since this would 
+            # generally mean an orphaned record
+            if isinstance(item, bson.DBRef) and not odict: 
+                continue
+            out.append(odict)
+        kwargs['current_depth'] -= 1
+
     elif isinstance(obj, (dict)):
         out = {}
         for k,v in obj.items():
