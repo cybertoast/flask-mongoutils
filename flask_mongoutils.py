@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-__version_info__ = ('0', '3', '16')
+__version_info__ = ('0', '3', '17')
 __version__ = '.'.join(__version_info__)
 __author__ = 'Sundar Raman'
 __license__ = 'BSD'
@@ -261,8 +261,8 @@ def object_to_dict(obj=None, recursive=False, depth=1, **kwargs):
             Context = globals().get(model)
             
             if not Context:
-                app.logger.error("Missing definition in model_map (%s)" % str(kwargs.get('model_map')),
-                                 "Missing Context (or import) for '%s'" % obj.collection)
+                app.logger.error("Missing definition in model_map (%s). " % str(kwargs.get('model_map')) + 
+                                 "Missing Context (or import) for '%s'." % obj.collection)
                 out = str(obj)
             else:
                 try:
